@@ -580,6 +580,18 @@ void Connection::maybeRequestFeatureFlags() {
 	m_FeatureFlagsRequestAttempts++;
 }
 
+bool Connection::beginListening(uint16_t port) {
+	auto result = m_UDP.begin(port);
+	if (result==0){ // non-successful, '0 if there are no sockets available to use'
+		m_Logger.warn("Couldn't listen to port '",port,"'.");
+	}
+	return (result==1); // returns true on success, false on no available sockets
+}
+
+void Connection::stopListening() {
+	m_UDP.stop();
+}
+
 bool Connection::isSensorStateUpdated(int i, std::unique_ptr<Sensor>& sensor) {
 	return m_AckedSensorState[i] != sensor->getSensorState()
 		|| m_AckedSensorCalibration[i] != sensor->hasCompletedRestCalibration();
@@ -811,6 +823,11 @@ void Connection::update() {
 			}
 			sendAcknowledgeConfigChange(sensorId, flagId);
 			configuration.save();
+			break;
+		}
+
+		case PACKET_RECEIVE_SEND: {
+			ShouldISendData=true;
 			break;
 		}
 	}

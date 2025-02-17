@@ -87,6 +87,15 @@ public:
 	// PACKET_FLEX_DATA 26
 	void sendFlexData(uint8_t sensorId, float flexLevel);
 
+	/// Begins listening for incomping ports on X port. Doesn't send any packets by itself.
+	/// Returns `true` on success, `false` if there are no available sockets to use.
+	bool beginListening(uint16_t port);
+	
+	/// Stops listening for incoming packets
+	void stopListening();
+
+	/// Simple boolean to determine if the server sent a packet requesting the data of the tracker.
+	bool ShouldISendData = false;
 #if ENABLE_INSPECTION
 	void sendInspectionRawIMUData(
 		uint8_t sensorId,
@@ -187,6 +196,9 @@ private:
 	uint16_t m_BundlePacketInnerCount = 0;
 
 	unsigned char m_Buf[8];
+
+	/// @brief Buffer for incoming data. It can hold up to 255 bytes? TODO: correct this later.
+	//uint8_t m_IncomingDataBuffer[255]; // This is future proofed, hence why it can hold 255 bytes. EDIT: removed after a re-read of code
 };
 
 }  // namespace Network
