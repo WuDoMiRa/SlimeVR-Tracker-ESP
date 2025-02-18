@@ -38,6 +38,7 @@ namespace Network {
 class Connection {
 public:
 	Connection() {
+		ShouldISendData=false;
 #ifdef SERVER_IP
 		m_ServerHost.fromString(SERVER_IP);
 #endif
@@ -95,7 +96,7 @@ public:
 	void stopListening();
 
 	/// Simple boolean to determine if the server sent a packet requesting the data of the tracker.
-	bool ShouldISendData = false;
+	bool ShouldISendData;
 #if ENABLE_INSPECTION
 	void sendInspectionRawIMUData(
 		uint8_t sensorId,

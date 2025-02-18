@@ -59,6 +59,7 @@ void setup() {
 	Serial.println();
 	Serial.println();
 
+	logger.warn("You are using the Queue-Like sytem issue PATCH!");
 	logger.info("SlimeVR v" FIRMWARE_VERSION " starting up...");
 
 	statusManager.setStatus(SlimeVR::Status::LOADING, true);
@@ -122,8 +123,10 @@ void loop() {
 	SerialCommands::update();
 	tpsCounter.update();
 	OTA::otaUpdate();
+	//logger.info("Should I send Data: ",networkConnection.ShouldISendData);
 	sensorManager.update(networkConnection.ShouldISendData);
 	battery.Loop(networkConnection.ShouldISendData);
+	if (networkConnection.ShouldISendData){ networkConnection.ShouldISendData=false; logger.debug("Now we are resetting the boolean back to false."); } 
 #ifdef TARGET_LOOPTIME_MICROS
 	long elapsed = (micros() - loopTime);
 	if (elapsed < TARGET_LOOPTIME_MICROS) {

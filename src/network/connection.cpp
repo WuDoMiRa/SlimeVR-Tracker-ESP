@@ -730,6 +730,12 @@ void Connection::update() {
 #endif
 
 	switch (convert_chars<int>(m_Packet)) {
+		case PACKET_RECEIVE_SEND: {
+			m_Logger.debug("We received 'should we send data' packet from server!");
+			ShouldISendData=true;
+			break;
+		}
+
 		case PACKET_RECEIVE_HEARTBEAT:
 			sendHeartbeat();
 			break;
@@ -823,11 +829,6 @@ void Connection::update() {
 			}
 			sendAcknowledgeConfigChange(sensorId, flagId);
 			configuration.save();
-			break;
-		}
-
-		case PACKET_RECEIVE_SEND: {
-			ShouldISendData=true;
 			break;
 		}
 	}
