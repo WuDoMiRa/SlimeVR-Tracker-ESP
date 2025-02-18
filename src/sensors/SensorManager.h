@@ -55,7 +55,7 @@ public:
 	void setup();
 	void postSetup();
 
-	void update();
+	void update(bool server_requested_data);
 
 	std::vector<std::unique_ptr<Sensor>>& getSensors() { return m_Sensors; };
 	SensorTypeID getSensorType(size_t id) {

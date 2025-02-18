@@ -50,7 +50,6 @@ unsigned long lastStatePrint = 0;
 bool secondImuActive = false;
 BatteryMonitor battery;
 TPSCounter tpsCounter;
-bool server_requested_data = false;
 
 void setup() {
 	Serial.begin(serialBaudRate);
@@ -123,23 +122,8 @@ void loop() {
 	SerialCommands::update();
 	tpsCounter.update();
 	OTA::otaUpdate();
-	server_requested_data=networkConnection.ShouldISendData; // this is important
-	
-	if (server_requested_data){
-		// Server requested data, so update.
-		/// TODO: Should there be delays between updates: i.e small delays? This will add up the total response time of the tracker, HOWEVER:
-		/// You can get a benefit of not sending a lot of requests at once, this is like a burst of information, but this can also prevent
-		/// sending a lot of requests at once.
-		sensorManager.update();
-		battery.Loop();
-	} else {
-		/// TODO: Server did NOT request data so should we just sleep here to conserve power?
-		// By sleeping, you could make the tracker late to respond
-		// The ideal response time for ALL trackers should in total be under <100 ms. By 'total' I mean every response time for every tracker added up in total.
-		// Delays up to 200-300ms may be acceptable for the end-user, depending on their tolerance.
-		delay(1); // Let us just focus on implementing for now, and worry about extra features another time.
-		// Implementing the other features, and having them customizable may require configuration changes.
-	}
+	sensorManager.update(networkConnection.ShouldISendData);
+	battery.Loop(networkConnection.ShouldISendData);
 #ifdef TARGET_LOOPTIME_MICROS
 	long elapsed = (micros() - loopTime);
 	if (elapsed < TARGET_LOOPTIME_MICROS) {

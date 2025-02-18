@@ -165,7 +165,7 @@ void SensorManager::postSetup() {
 	}
 }
 
-void SensorManager::update() {
+void SensorManager::update(bool server_requested_data) {
 	// Gather IMU data
 	bool allIMUGood = true;
 	for (auto& sensor : m_Sensors) {
@@ -218,9 +218,11 @@ void SensorManager::update() {
 	networkConnection.beginBundle();
 #endif
 
-	for (auto& sensor : m_Sensors) {
-		if (sensor->isWorking()) {
-			sensor->sendData();
+	if (server_requested_data){
+		for (auto& sensor : m_Sensors) {
+			if (sensor->isWorking()) {
+				sensor->sendData();
+			}
 		}
 	}
 

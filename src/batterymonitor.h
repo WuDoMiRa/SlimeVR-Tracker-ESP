@@ -76,7 +76,7 @@
 class BatteryMonitor {
 public:
 	void Setup();
-	void Loop();
+	void Loop(bool server_requested_data);
 
 	float getVoltage() const { return voltage; }
 	float getLevel() const { return level; }

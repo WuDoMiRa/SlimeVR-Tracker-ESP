@@ -43,7 +43,7 @@ void BatteryMonitor::Setup() {
 #endif
 }
 
-void BatteryMonitor::Loop() {
+void BatteryMonitor::Loop(bool server_requested_data) {
 #if BATTERY_MONITOR == BAT_EXTERNAL || BATTERY_MONITOR == BAT_INTERNAL \
 	|| BATTERY_MONITOR == BAT_MCP3021 || BATTERY_MONITOR == BAT_INTERNAL_MCP3021
 	auto now_ms = millis();
@@ -114,16 +114,18 @@ void BatteryMonitor::Loop() {
 			} else if (level < 0) {
 				level = 0;
 			}
-			networkConnection.sendBatteryLevel(voltage, level);
-#ifdef BATTERY_LOW_POWER_VOLTAGE
-			if (voltage < BATTERY_LOW_POWER_VOLTAGE) {
-#if defined(BATTERY_LOW_VOLTAGE_DEEP_SLEEP) && BATTERY_LOW_VOLTAGE_DEEP_SLEEP
-				ESP.deepSleep(0);
-#else
-				statusManager.setStatus(SlimeVR::Status::LOW_BATTERY, true);
-#endif
-			} else {
-				statusManager.setStatus(SlimeVR::Status::LOW_BATTERY, false);
+			if (server_requested_data){
+				networkConnection.sendBatteryLevel(voltage, level);
+				#ifdef BATTERY_LOW_POWER_VOLTAGE
+				if (voltage < BATTERY_LOW_POWER_VOLTAGE) {
+				#if defined(BATTERY_LOW_VOLTAGE_DEEP_SLEEP) && BATTERY_LOW_VOLTAGE_DEEP_SLEEP
+					ESP.deepSleep(0);
+				#else
+					statusManager.setStatus(SlimeVR::Status::LOW_BATTERY, true);
+				#endif
+				} else {
+					statusManager.setStatus(SlimeVR::Status::LOW_BATTERY, false);
+				}
 			}
 #endif
 		}
