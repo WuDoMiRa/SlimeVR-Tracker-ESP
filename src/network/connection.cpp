@@ -21,7 +21,7 @@
 	THE SOFTWARE.
 */
 
-#include "connection.h"
+#include "connection.hpp"
 
 #include "GlobalVars.h"
 #include "logging/Logger.h"
@@ -184,7 +184,7 @@ bool Connection::sendPacketNumber() {
 	}
 
 	uint64_t pn = m_PacketNumber++;
-
+	m_SentPackets[pn] = millis();  // Track send time
 	return sendLong(pn);
 }
 
@@ -580,17 +580,68 @@ void Connection::maybeRequestFeatureFlags() {
 	m_FeatureFlagsRequestAttempts++;
 }
 
-bool Connection::beginListening(uint16_t port) {
-	auto result = m_UDP.begin(port);
-	if (result==0){ // non-successful, '0 if there are no sockets available to use'
-		m_Logger.warn("Couldn't listen to port '",port,"'.");
-	}
-	return (result==1); // returns true on success, false on no available sockets
+// connection.cpp
+void Connection::updateTFRCRate() {
+    const unsigned long now = millis();
+    if (now - m_LastRateUpdate < 500) return; // Update every 500ms
+    
+    // Calculate loss event rate using weighted harmonic mean (RFC 5348)
+    if (!m_LossIntervals.empty()) {
+        float sum_weights = 0.0f;
+        float sum_weighted = 0.0f;
+        int n = std::min((int)m_LossIntervals.size(), 8); // Use last 8 intervals
+        
+        for (int i=0; i<n; i++) {
+            float weight = 1.0f / (1 << (n - i - 1));
+            sum_weights += weight;
+            sum_weighted += weight * m_LossIntervals[i];
+        }
+        
+        m_LossEventRate = 1.0f / (sum_weighted / sum_weights);
+    }
+
+    // TFRC throughput equation (RFC 5348 section 3.1)
+    const float R = m_Rtt / 1000.0f; // Convert to seconds
+    const float p = m_LossEventRate;
+    const float s = m_PacketSize;
+    
+    const float X = (s * 8.0f) / (R * sqrt(p) + 
+        12.0f * p * (1.0f + 32.0f * p*p) * sqrt(3.0f * p/8.0f));
+
+    // Apply bounds (convert from bits/sec to packets/sec)
+    m_CurrentRate = X / (s * 8.0f);
+    m_CurrentRate = std::clamp(m_CurrentRate, 20.0f, 400.0f);
+    
+    m_LastRateUpdate = now;
 }
 
-void Connection::stopListening() {
-	m_UDP.stop();
+void Connection::processAck(uint64_t ackedPN) {
+    // Detect lost packets
+    auto it = m_SentPackets.lower_bound(ackedPN);
+    while (it != m_SentPackets.begin()) {
+        --it;
+        if (millis() - it->second > m_Rtt * 4) { // Considered lost
+            recordLossEvent();
+            m_SentPackets.erase(it);
+            it = m_SentPackets.lower_bound(ackedPN);
+        }
+    }
 }
+
+void Connection::recordLossEvent() {
+    const float currentTime = millis() / 1000.0f;
+    static float lastLossTime = 0;
+    
+    if (!m_FirstLoss) {
+        float interval = currentTime - lastLossTime;
+        m_LossIntervals.push_front(interval);
+        if (m_LossIntervals.size() > 8) m_LossIntervals.pop_back();
+    }
+    
+    lastLossTime = currentTime;
+    m_FirstLoss = false;
+}
+
 
 bool Connection::isSensorStateUpdated(int i, std::unique_ptr<Sensor>& sensor) {
 	return m_AckedSensorState[i] != sensor->getSensorState()
@@ -730,10 +781,22 @@ void Connection::update() {
 #endif
 
 	switch (convert_chars<int>(m_Packet)) {
-		case PACKET_RECEIVE_SEND: {
-			m_Logger.debug("We received 'should we send data' packet from server!");
-			ShouldISendData=true;
-			break;
+		case PACKET_ACK: {
+            if (len < 12) break;
+            
+            uint64_t ackedPN = convert_chars<uint64_t>(m_Packet + 4);
+            unsigned long ackTime = convert_chars<unsigned long>(m_Packet + 12);
+            
+            // Calculate RTT
+            if (m_SentPackets.count(ackedPN)) {
+                unsigned long sendTime = m_SentPackets[ackedPN];
+                unsigned long rtt = millis() - sendTime;
+                
+                // Update smoothed RTT
+                m_Rtt = 0.875f * m_Rtt + 0.125f * rtt;
+                m_SentPackets.erase(ackedPN);
+            }
+            break;
 		}
 
 		case PACKET_RECEIVE_HEARTBEAT:

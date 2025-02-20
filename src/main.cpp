@@ -115,6 +115,10 @@ void setup() {
 }
 
 void loop() {
+	static unsigned long lastSend = 0;
+    const float minInterval = 1000.0f / networkConnection.getCurrentRate();
+    
+    networkConnection.updateTFRCRate();
 	// These seem important?
 	globalTimer.tick();
 	networkManager.update();
@@ -124,9 +128,12 @@ void loop() {
 	tpsCounter.update();
 	OTA::otaUpdate();
 	//logger.info("Should I send Data: ",networkConnection.ShouldISendData);
-	sensorManager.update(networkConnection.ShouldISendData);
-	battery.Loop(networkConnection.ShouldISendData);
-	if (networkConnection.ShouldISendData){ networkConnection.ShouldISendData=false; logger.debug("Now we are resetting the boolean back to false."); } 
+	if ((micros() - lastSend) >= (1e6 / networkConnection.getCurrentRate())) {
+		sensorManager.update(true);
+		battery.Loop(true);
+		lastSend = micros();
+	}
+	//if (networkConnection.ShouldISendData){ networkConnection.ShouldISendData=false; }// logger.debug("Now we are resetting the boolean back to false."); } 
 #ifdef TARGET_LOOPTIME_MICROS
 	long elapsed = (micros() - loopTime);
 	if (elapsed < TARGET_LOOPTIME_MICROS) {

@@ -29,7 +29,7 @@
 #include "LEDManager.h"
 #include "batterymonitor.h"
 #include "configuration/Configuration.h"
-#include "network/connection.h"
+#include "network/connection.hpp"
 #include "network/manager.h"
 #include "sensors/SensorManager.h"
 #include "status/StatusManager.h"

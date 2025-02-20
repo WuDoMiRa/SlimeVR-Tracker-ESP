@@ -52,6 +52,8 @@
 #define PACKET_ACKNOWLEDGE_CONFIG_CHANGE 24
 #define PACKET_SET_CONFIG_FLAG 25
 #define PACKET_FLEX_DATA 26
+// Add ACK packet type
+#define PACKET_ACK 27
 
 #define PACKET_BUNDLE 100
 
@@ -61,7 +63,7 @@
 #define PACKET_RECEIVE_VIBRATE 2
 #define PACKET_RECEIVE_HANDSHAKE 3
 #define PACKET_RECEIVE_COMMAND 4
-#define PACKET_RECEIVE_SEND 5 // when the server sends a packet to make tracker send data
+//#define PACKET_RECEIVE_SEND 5 // when the server sends a packet to make tracker send data DEPRECATED/SCRAPPED
 
 #define PACKET_INSPECTION_PACKETTYPE_RAW_IMU_DATA 1
 #define PACKET_INSPECTION_PACKETTYPE_FUSED_IMU_DATA 2

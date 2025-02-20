@@ -31,14 +31,20 @@
 #include "quat.h"
 #include "sensors/sensor.h"
 #include "wifihandler.h"
-
+#include <map>
+#include <deque>
+#include "stdio.h"
 namespace SlimeVR {
 namespace Network {
 
 class Connection {
 public:
 	Connection() {
-		ShouldISendData=false;
+		m_CurrentRate = 50.0f;  // Initial rate in packets/sec
+		m_Rtt = 100.0f;         // Smoothed RTT in ms
+		m_PacketLoss = 0.0f;    // Packet loss ratio (0-1)
+		m_LastRateUpdate = 0;
+		m_SentPackets={};  // PacketNumber -> SendTime
 #ifdef SERVER_IP
 		m_ServerHost.fromString(SERVER_IP);
 #endif
@@ -90,13 +96,16 @@ public:
 
 	/// Begins listening for incomping ports on X port. Doesn't send any packets by itself.
 	/// Returns `true` on success, `false` if there are no available sockets to use.
-	bool beginListening(uint16_t port);
+	//bool beginListening(uint16_t port);
 	
 	/// Stops listening for incoming packets
-	void stopListening();
+	//void stopListening();
 
 	/// Simple boolean to determine if the server sent a packet requesting the data of the tracker.
-	bool ShouldISendData;
+	//bool ShouldISendData;
+	void updateTFRCRate();
+	void processAck(uint64_t ackedPN);
+	void recordLossEvent();
 #if ENABLE_INSPECTION
 	void sendInspectionRawIMUData(
 		uint8_t sensorId,
@@ -134,7 +143,18 @@ public:
 
 	bool beginBundle();
 	bool endBundle();
-
+	float getCurrentRate() const { return m_CurrentRate; }
+	// TFRC Variables
+	float m_CurrentRate;  // Initial rate in packets/sec
+	float m_Rtt;         // Smoothed RTT in ms
+	float m_PacketLoss;    // Packet loss ratio (0-1)
+	unsigned long m_LastRateUpdate;
+	std::map<uint64_t, unsigned long> m_SentPackets;  // PacketNumber -> SendTime
+	// Add these members
+    float m_LossEventRate = 0.0f;
+    std::deque<float> m_LossIntervals;
+    uint32_t m_PacketSize = 120; // Average UDP payload size
+    bool m_FirstLoss = true;
 private:
 	void updateSensorState(std::vector<std::unique_ptr<Sensor>>& sensors);
 	void maybeRequestFeatureFlags();
