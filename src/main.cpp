@@ -50,6 +50,7 @@ unsigned long lastStatePrint = 0;
 bool secondImuActive = false;
 BatteryMonitor battery;
 TPSCounter tpsCounter;
+bool shouldwesend=false;
 
 void setup() {
 	Serial.begin(serialBaudRate);
@@ -113,20 +114,44 @@ void setup() {
 	loopTime = micros();
 	tpsCounter.reset();
 }
+// Define desired loop frequency (Hz)
+#define LOOP_FREQUENCY_HZ 30  // e.g., 50Hz = 20ms per cycle
 
+// Convert Hz to milliseconds per cycle
+const unsigned long LOOP_INTERVAL_MS = 1000 / LOOP_FREQUENCY_HZ;
+unsigned long lastCycleTime = 0;
 void loop() {
+	unsigned long currentTime = millis();
+    
 	// These seem important?
 	globalTimer.tick();
 	networkManager.update();
 	I2CSCAN::update();
 	ledManager.update();
 	SerialCommands::update();
-	tpsCounter.update();
 	OTA::otaUpdate();
 	//logger.info("Should I send Data: ",networkConnection.ShouldISendData);
-	sensorManager.update(networkConnection.ShouldISendData);
-	battery.Loop(networkConnection.ShouldISendData);
-	if (networkConnection.ShouldISendData){ networkConnection.ShouldISendData=false; logger.debug("Now we are resetting the boolean back to false."); } 
+	 // Time-controlled updates
+	 if (currentTime - lastCycleTime >= LOOP_INTERVAL_MS) {
+        shouldwesend = true;  // Trigger data sending
+        
+		tpsCounter.update();
+		sensorManager.update(shouldwesend);
+		battery.Loop(shouldwesend);
+
+
+        lastCycleTime = currentTime;
+    }
+	if (shouldwesend){ shouldwesend=false; }//logger.debug("Now we are resetting the boolean back to false."); } 
+
+	// Maintain loop timing
+	#ifdef LOOP_FREQUENCY_HZ
+	unsigned long elapsed = millis() - currentTime;
+	if (elapsed < LOOP_INTERVAL_MS) {
+		delay(LOOP_INTERVAL_MS - elapsed);
+	}
+	#endif
+
 #ifdef TARGET_LOOPTIME_MICROS
 	long elapsed = (micros() - loopTime);
 	if (elapsed < TARGET_LOOPTIME_MICROS) {
