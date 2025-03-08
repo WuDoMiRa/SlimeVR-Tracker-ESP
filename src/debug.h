@@ -23,7 +23,7 @@
 #ifndef SLIMEVR_DEBUG_H_
 #define SLIMEVR_DEBUG_H_
 #include "consts.h"
-#include "logging/Level.h"
+//#include "logging/Level.h"
 
 #define IMU_MPU6050_RUNTIME_CALIBRATION  // Comment to revert to
 										 // startup/traditional-calibration

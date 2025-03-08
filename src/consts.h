@@ -171,6 +171,6 @@ enum class TrackerType {
 
 #define CURRENT_CONFIGURATION_VERSION 1
 
-#include "sensors/sensorposition.h"
+//#include "sensors/sensorposition.h"
 
 #endif  // SLIMEVR_CONSTS_H_

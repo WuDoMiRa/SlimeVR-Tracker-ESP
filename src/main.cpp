@@ -25,50 +25,18 @@
 
 #include "GlobalVars.h"
 #include "Wire.h"
-#include "batterymonitor.h"
-#include "credentials.h"
 #include "globals.h"
-#include "logging/Logger.h"
-#include "ota.h"
-#include "serial/serialcommands.h"
-#include "status/TPSCounter.h"
 
-Timer<> globalTimer;
-SlimeVR::Logging::Logger logger("SlimeVR");
-SlimeVR::Sensors::SensorManager sensorManager;
-SlimeVR::LEDManager ledManager(LED_PIN);
-SlimeVR::Status::StatusManager statusManager;
-SlimeVR::Configuration::Configuration configuration;
-SlimeVR::Network::Manager networkManager;
-SlimeVR::Network::Connection networkConnection;
-
-int sensorToCalibrate = -1;
-bool blinking = false;
-unsigned long blinkStart = 0;
-unsigned long loopTime = 0;
-unsigned long lastStatePrint = 0;
-bool secondImuActive = false;
-BatteryMonitor battery;
-TPSCounter tpsCounter;
-bool shouldwesend=false;
-
+Logger logger(Serial,"SlimeVR");
+IMUObj imu1;
+#ifdef SECOND_IMU != IMU
+IMUObj imu2; // define second
+#endif
+//SlimeVR::Logging::Logger logger("SlimeVR");
 void setup() {
+	pinMode(LED_PIN, OUTPUT); // set up LED
+	digitalWrite(LED_PIN, LED__ON); // turn ON LED
 	Serial.begin(serialBaudRate);
-	globalTimer = timer_create_default();
-
-	Serial.println();
-	Serial.println();
-	Serial.println();
-
-	logger.warn("You are using the Queue-Like sytem issue PATCH!");
-	logger.info("SlimeVR v" FIRMWARE_VERSION " starting up...");
-
-	statusManager.setStatus(SlimeVR::Status::LOADING, true);
-
-	ledManager.setup();
-	configuration.setup();
-
-	SerialCommands::setUp();
 	// Make sure the bus isn't stuck when resetting ESP without powering it down
 	// Fixes I2C issues for certain IMUs. Previously this feature was enabled for
 	// selected IMUs, now it's enabled for all. If some IMU turned out to be broken by
@@ -100,79 +68,15 @@ void setup() {
 
 	// Wait for IMU to boot
 	delay(500);
-
-	sensorManager.setup();
-
-	networkManager.setup();
-	OTA::otaSetup(otaPassword);
-	battery.Setup();
-
-	statusManager.setStatus(SlimeVR::Status::LOADING, false);
-
-	sensorManager.postSetup();
-
-	loopTime = micros();
-	tpsCounter.reset();
+	digitalWrite(LED_PIN, LED__OFF);
 }
-// Define desired loop frequency (Hz)
-#define LOOP_FREQUENCY_HZ 30  // e.g., 50Hz = 20ms per cycle
 
-// Convert Hz to milliseconds per cycle
-const unsigned long LOOP_INTERVAL_MS = 1000 / LOOP_FREQUENCY_HZ;
-unsigned long lastCycleTime = 0;
+
 void loop() {
-	unsigned long currentTime = millis();
-    
-	// These seem important?
-	globalTimer.tick();
-	networkManager.update();
-	I2CSCAN::update();
-	ledManager.update();
-	SerialCommands::update();
-	OTA::otaUpdate();
-	//logger.info("Should I send Data: ",networkConnection.ShouldISendData);
-	 // Time-controlled updates
-	 if (currentTime - lastCycleTime >= LOOP_INTERVAL_MS) {
-        shouldwesend = true;  // Trigger data sending
-        
-		tpsCounter.update();
-		sensorManager.update(shouldwesend);
-		battery.Loop(shouldwesend);
-
-
-        lastCycleTime = currentTime;
-    }
-	if (shouldwesend){ shouldwesend=false; }//logger.debug("Now we are resetting the boolean back to false."); } 
-
-	// Maintain loop timing
-	#ifdef LOOP_FREQUENCY_HZ
-	unsigned long elapsed = millis() - currentTime;
-	if (elapsed < LOOP_INTERVAL_MS) {
-		delay(LOOP_INTERVAL_MS - elapsed);
-	}
-	#endif
-
-#ifdef TARGET_LOOPTIME_MICROS
-	long elapsed = (micros() - loopTime);
-	if (elapsed < TARGET_LOOPTIME_MICROS) {
-		long sleepus = TARGET_LOOPTIME_MICROS - elapsed - 100;  // µs to sleep
-		long sleepms = sleepus / 1000;  // ms to sleep
-		if (sleepms > 0)  // if >= 1 ms
-		{
-			delay(sleepms);  // sleep ms = save power
-			sleepus -= sleepms * 1000;
-		}
-		if (sleepus > 100) {
-			delayMicroseconds(sleepus);
-		}
-	}
-	loopTime = micros();
-#endif
-#if defined(PRINT_STATE_EVERY_MS) && PRINT_STATE_EVERY_MS > 0
-	unsigned long now = millis();
-	if (lastStatePrint + PRINT_STATE_EVERY_MS < now) {
-		lastStatePrint = now;
-		SerialCommands::printState();
-	}
-#endif
+	digitalWrite(LED_PIN, LED__ON); // turn ON LED
+	logger.print("LED ON");
+	delay(1000); // wait for a second
+	digitalWrite(LED_PIN, LED__OFF); // turn OFF LED
+	logger.print("LED OFF");
+	delay(1000); // wait for a second
 }

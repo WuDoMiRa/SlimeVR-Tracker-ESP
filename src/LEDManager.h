@@ -26,7 +26,6 @@
 #include <Arduino.h>
 
 #include "globals.h"
-#include "logging/Logger.h"
 
 #define DEFAULT_LENGTH 300
 #define DEFAULT_GAP 500
@@ -89,8 +88,6 @@ private:
 	unsigned long m_LastUpdate = millis();
 
 	uint8_t m_Pin;
-
-	Logging::Logger m_Logger = Logging::Logger("LEDManager");
 };
 }  // namespace SlimeVR
 
