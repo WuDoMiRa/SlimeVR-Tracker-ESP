@@ -26,6 +26,8 @@
 #include "GlobalVars.h"
 #include "Wire.h"
 #include "globals.h"
+#include <map>
+//#include <ArduinoJson.hpp>
 
 SlimeVR::Logger logger(Serial,"SlimeVR");
 #ifdef IMU==IMU_ICM42688
@@ -34,8 +36,15 @@ SlimeVR::Logger logger(Serial,"SlimeVR");
 #endif
 // TODO: add a second imu. this can be a dynamic system later.
 //SlimeVR::Logging::Logger logger("SlimeVR");
+std::vector<byte> i2c_addresses;
+//SlimeVR::FSConfig fsConfig;
+//ArduinoJson::JsonDocument tracker_config;
 void setup() {
-	// TODO: setup configuration file here as well, save to json.
+	//if (!fsConfig.fileExists("/config.json")) {
+	//	logger.warn("Config file not found. Creating default config.");
+	//	fsConfig.SaveJSON("/config.json", tracker_config);
+	//}
+
 	pinMode(LED_PIN, OUTPUT); // set up LED
 	digitalWrite(LED_PIN, LED__ON); // turn ON LED
 	Serial.begin(serialBaudRate);
@@ -79,8 +88,26 @@ void setup() {
 
 	// Wait for IMU to boot
 	delay(500);
-	digitalWrite(LED_PIN, LED__OFF);
-}
+	logger.print("Scanning I2C bus for devices...");
+	// scan for i2c devices upon boot.
+	byte error,address;
+	for(address = 1; address < 127; address++ ) {
+		// The i2c_scanner uses the return value of
+		// the Write.endTransmisstion to see if
+		// a device did acknowledge to the address.
+		Wire.beginTransmission(address);
+		error = Wire.endTransmission();
+		if (error == 0)
+		{
+			i2c_addresses.push_back(address);
+		}
+		else if (error==4)
+		{
+			logger.error("Device did not acknowledge the address: 0x%d",address);
+		}
+	}
+	logger.print("Found %d I2C devices.",i2c_addresses.size());
+}	
 
 
 void loop() {
