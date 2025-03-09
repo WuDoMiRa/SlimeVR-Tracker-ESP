@@ -24,10 +24,10 @@
 #ifndef GLOBALVARS_H
 #define GLOBALVARS_H
 
-#include <arduino-timer.h>
-#include <logging/Logger.h>
+//#include <arduino-timer.h>
+#include "logging/Logger.h"
 
 //extern Timer<> globalTimer;
-extern Logger logger;
+extern SlimeVR::Logger logger;
 
 #endif

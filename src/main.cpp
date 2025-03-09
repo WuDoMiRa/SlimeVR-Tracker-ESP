@@ -27,16 +27,19 @@
 #include "Wire.h"
 #include "globals.h"
 
-Logger logger(Serial,"SlimeVR");
-IMUObj imu1;
-#ifdef SECOND_IMU != IMU
-IMUObj imu2; // define second
+SlimeVR::Logger logger(Serial,"SlimeVR");
+#ifdef IMU==IMU_ICM42688
+	#include "IMU/ICM42688_drv.h"
+	SlimeVR::ICM42688_DRIVER imu1;
 #endif
+// TODO: add a second imu. this can be a dynamic system later.
 //SlimeVR::Logging::Logger logger("SlimeVR");
 void setup() {
+	// TODO: setup configuration file here as well, save to json.
 	pinMode(LED_PIN, OUTPUT); // set up LED
 	digitalWrite(LED_PIN, LED__ON); // turn ON LED
 	Serial.begin(serialBaudRate);
+	logger.print("Booting up");
 	// Make sure the bus isn't stuck when resetting ESP without powering it down
 	// Fixes I2C issues for certain IMUs. Previously this feature was enabled for
 	// selected IMUs, now it's enabled for all. If some IMU turned out to be broken by
@@ -66,6 +69,14 @@ void setup() {
 #endif
 	Wire.setClock(I2C_SPEED);
 
+	if (!imu1.imu_init()) {
+		logger.error("Failed to initialize the primary IMU.");
+	} else {
+		logger.print("Successfully initialized primary IMU %s.", imu1.name);
+		//imu1.VQF_init();
+	}
+
+
 	// Wait for IMU to boot
 	delay(500);
 	digitalWrite(LED_PIN, LED__OFF);
@@ -73,10 +84,10 @@ void setup() {
 
 
 void loop() {
-	digitalWrite(LED_PIN, LED__ON); // turn ON LED
-	logger.print("LED ON");
-	delay(1000); // wait for a second
-	digitalWrite(LED_PIN, LED__OFF); // turn OFF LED
-	logger.print("LED OFF");
-	delay(1000); // wait for a second
+	imu1.update();
+	imu1.VQF_update();
+	logger.print("Max memory: %d, used memory: %d, freee memory: %d", ESP.getFlashChipSize(), ESP.getSketchSize(), ESP.getFreeSketchSpace());
+	logger.print("Quat: %f %f %f %f", imu1.quat.w, imu1.quat.x, imu1.quat.y, imu1.quat.z);
+	logger.print("Accel: %f %f %f", imu1.acceleration.x, imu1.acceleration.y, imu1.acceleration.z);
+	delay(1000);
 }
