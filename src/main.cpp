@@ -34,7 +34,7 @@ SlimeVR::Logger logger(Serial,"SlimeVR");
 	#include "IMU/ICM42688_drv.h"
 	SlimeVR::ICM42688_DRIVER imu1;
 #endif
-// TODO: add a second imu. this can be a dynamic system later.
+/// TODO: add a second imu. this can be a dynamic system later.
 //SlimeVR::Logging::Logger logger("SlimeVR");
 std::vector<byte> i2c_addresses;
 //SlimeVR::FSConfig fsConfig;
@@ -107,14 +107,24 @@ void setup() {
 		}
 	}
 	logger.print("Found %d I2C devices.",i2c_addresses.size());
+	for ( auto &i : i2c_addresses ) {
+		logger.info("Device found at address 0x%x",i);
+	}
+	logger.print("Calibrating IMU.");
 }	
 
 
 void loop() {
 	imu1.update();
-	imu1.VQF_update();
-	logger.print("Max memory: %d, used memory: %d, freee memory: %d", ESP.getFlashChipSize(), ESP.getSketchSize(), ESP.getFreeSketchSpace());
-	logger.print("Quat: %f %f %f %f", imu1.quat.w, imu1.quat.x, imu1.quat.y, imu1.quat.z);
-	logger.print("Accel: %f %f %f", imu1.acceleration.x, imu1.acceleration.y, imu1.acceleration.z);
-	delay(1000);
+	imu1.position_estimation();
+	SlimeVR::ReadSerial();
+	//logger.print("Max memory: %d, used memory: %d, freee memory: %d", ESP.getFlashChipSize(), ESP.getSketchSize(), ESP.getFreeSketchSpace());
+	//logger.print("Quat: %f %f %f %f", imu1.quat.W, imu1.quat.X, imu1.quat.Y, imu1.quat.Z);
+	//logger.print("Gryo: %f %f %f", imu1.gyro.X*(180/PI), imu1.gyro.Y*(180/PI), imu1.gyro.Z*(180/PI));
+	//logger.print("Rotation: %f %f %f", imu1.rotation.X*(180/PI), imu1.rotation.Y*(180/PI), imu1.rotation.Z*(180/PI));
+	//logger.print("Accel: %f %f %f", imu1.acceleration.X, imu1.acceleration.Y, imu1.acceleration.Z);
+	//logger.print("Position: %f %f %f", imu1.position.X, imu1.position.Y, imu1.position.Z);
+
+	// its not accurate anyway because of 1 second delays.
+	//delay(1000);
 }

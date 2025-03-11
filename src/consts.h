@@ -120,6 +120,10 @@ enum class SensorTypeID {
 // 5+1, by ~15% for 5+3 setups. PPS: 650 @ 5+1, 650 @ 5+3
 #define PACKET_BUNDLING_BUFFERED 2
 
+/// Question from RubyKyo: Why do you need to do such math for degress, in fact, you could literally just define them like:
+/// #define DEG_0 0
+/// #define DEG_90 90.0f
+/// When we convert from radians to degrees, this should be done in code, why is this here? Why does this even exist?
 // Get radian for a given angle from 0° to 360° (2*PI*r, solve for r given an angle,
 // range -180° to 180°)
 #define DEG_X(deg) ((((deg) < 180.0f ? 0 : 360.0f) - (deg)) * PI / 180.0f)

@@ -27,9 +27,10 @@
 //#include <arduino-timer.h>
 #include "logging/Logger.h"
 #include "FSConfig/FSConfig.hpp"
+#include "serial_commands/serial_mgn.h"
 
 //extern Timer<> globalTimer;
 extern SlimeVR::Logger logger;
-extern SlimeVR::FSConfig fsConfig;
+
 
 #endif
