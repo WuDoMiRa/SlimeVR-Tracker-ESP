@@ -32,7 +32,7 @@
 #include "IMU/IMU.h"
 
 //extern Timer<> globalTimer;
-extern SlimeVR::Logger logger;
+//extern SlimeVR::Logger logger(Serial,"SlimeVR");
 extern SlimeVR::SerialManager serialmgn;
 
 

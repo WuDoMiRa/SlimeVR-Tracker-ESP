@@ -23,6 +23,12 @@ namespace SlimeVR {
 
 				// Convert buffer to string
 				String complete_string(buffer);
+				// Remove any special characters from the string
+				complete_string.replace('\r', ' ');
+				complete_string.replace('\n', ' ');
+				complete_string.replace('\t', ' ');
+				complete_string.replace('\v', ' ');
+				complete_string.replace('\f', ' ');
 
 				// extract prefix
 				String prefix = complete_string.substring(0, complete_string.indexOf(' '));
@@ -31,22 +37,31 @@ namespace SlimeVR {
 
 				// extract arguments from the string into a vector. Keeping spaces that are in quotes (' or ")
 				std::vector<String> arguments;
-				int start = complete_string.indexOf(' ');
-				int end = complete_string.length();
-				while (start != -1) {
-					while (complete_string[start] == ' ') {
-						start++;
+				bool in_quotes = false;
+				char quote_char = '\0';
+				String current_arg;
+
+				for (size_t i = prefix.length() + 1; i < complete_string.length(); i++) {
+					char c = complete_string[i];
+					
+					if ((c == '\'' || c == '"') && (!in_quotes || c == quote_char)) {
+						in_quotes = !in_quotes;
+						quote_char = in_quotes ? c : '\0';
+						continue;
 					}
-					if (complete_string[start] == '\"' || complete_string[start] == '\'') {
-						start++;
-						end = complete_string.indexOf(complete_string[start], start);
-						arguments.push_back(complete_string.substring(start, end));
-						start = complete_string.indexOf(' ', end);
+					
+					if (c == ' ' && !in_quotes) {
+						if (!current_arg.isEmpty()) {
+							arguments.push_back(current_arg);
+							current_arg = "";
+						}
 					} else {
-						end = complete_string.indexOf(' ', start);
-						arguments.push_back(complete_string.substring(start, end));
-						start = complete_string.indexOf(' ', end);
+						current_arg += c;
 					}
+				}
+
+				if (!current_arg.isEmpty()) {
+					arguments.push_back(current_arg);
 				}
 
 
@@ -60,10 +75,16 @@ namespace SlimeVR {
 				// you cannot exactly have a 'dynamic' implementation unfortunately in C, C++.
 
 				// Make a switch that checks the prefix, and then runs the command.
-				if (lowercaseprefix == WifiCMD.name) {
+
+				/// TODO: There's an issue with serial commands where:
+				// text could appear to be 'wifi' on the terminal, but the check below fails and just defaults to unknown command, which means the check is failing.
+				// might be hidden characters at play EDIT: it was. hidden characters are (\n,\r,\t, etc.)
+				if (lowercaseprefix==WifiCMD.name) {
 					return WifiCMD.run(arguments);
 				}
 				logger.print("Unknown command: %s", prefix.c_str());
+				//delay(100);
+				//logger.debug("What I received: %s, wifi command name: %s", lowercaseprefix, WifiCMD.name);
 			} else {
 				buffer[buffer_index] = c;
 				buffer_index++;

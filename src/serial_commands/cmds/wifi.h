@@ -22,16 +22,39 @@ namespace SlimeVR {
                 logger.print("Usage: wifi <ssid> <password>");
                 return;
             }
+            // stuff copy and pasted from the main slimevr branch
             WiFi.begin(arguments[0].c_str(), arguments[1].c_str());
+            WiFi.persistent(true);
+            WiFi.mode(WIFI_STA);
+            WiFi.setPhyMode(WIFI_PHY_MODE_11N);
+            WiFi.hostname("SlimeVR FBT Tracker");
+            // end
             logger.print("Connecting to WiFi: %s", arguments[0].c_str());
-            Serial.println(arguments[0].c_str());
             int attempts=0;
             while (WiFi.status() != WL_CONNECTED) {
                 delay(500);
-                Serial.print(".");
                 attempts++;
-                if(attempts > 10){
-                    logger.error("Failed to connect to WiFi. This may be because of incorrect credentials or maybe the tracker is too far away.");
+                if(attempts > 40){
+                    switch (WiFi.status()) {
+                        case WL_IDLE_STATUS:
+                            logger.error("WiFi is in idle state");
+                            break;
+                        case WL_NO_SSID_AVAIL:
+                            logger.error("SSID not found");
+                            break;
+                        case WL_WRONG_PASSWORD:
+                            logger.error("Wrong password.");
+                            break;
+                        case WL_CONNECT_FAILED:
+                            logger.error("Connection failed");
+                            break;
+                        case WL_DISCONNECTED:
+                            logger.error("WiFi is disconnected");
+                            break;
+                        default:
+                            logger.error("Failed to connect to WiFi. Unknown error: %d", WiFi.status());
+                            break;
+                    }
                     return;
                 }
             }

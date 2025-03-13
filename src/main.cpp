@@ -28,15 +28,13 @@
 #include "globals.h"
 #include <map>
 //#include <ArduinoJson.hpp>
-
-SlimeVR::Logger logger(Serial,"SlimeVR");
-SlimeVR::SerialManager serialmng;
 #ifdef IMU==IMU_ICM42688
 	#include "IMU/ICM42688_drv.h"
 	SlimeVR::ICM42688_DRIVER imu1;
 #endif
 /// TODO: add a second imu. this can be a dynamic system later.
-//SlimeVR::Logging::Logger logger("SlimeVR");
+SlimeVR::Logger logger(Serial,"SlimeVR");
+SlimeVR::SerialManager SMNGR;
 std::vector<byte> i2c_addresses;
 //SlimeVR::FSConfig fsConfig;
 //ArduinoJson::JsonDocument tracker_config;
@@ -115,6 +113,7 @@ void setup() {
 }	
 void loop() {
 	imu1.update();
+	SMNGR.ReadSerial();
 	//serialmng.ReadSerial();
 	//imu1.position_estimation();
 	//SlimeVR::ReadSerial();
