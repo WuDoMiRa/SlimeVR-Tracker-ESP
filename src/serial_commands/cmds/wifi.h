@@ -1,19 +1,16 @@
 #include <string>
 #include <Arduino.h>
 #include <vector>
-#include "../../globals.h"
+#include "globals.h"
 /// TODO: for some reason, the IDE shows no errors about importing ESP8266WiFi.h, and
 /// I can see definitions about the 'WiFi' class, however, when it comes to actually building,
 /// compiling will show that 'ESP8266WiFi.h' doesn't exist. Tried a reinstall of platformio.ini (deleting the folder/libraries and having it reinstall)
 /// only for it to not work again. Maybe don't develop on Windows next time, future me?
-#ifdef ESP8266
-#include <ESP8266WiFi.h>
-#else
-#include <WiFi.h>
-#endif
-#if !ESP8266
-#include "esp_wifi.h"
-#endif
+
+/// The problem wasn't because I was using windows but because for some reason developing with platformio,
+/// you need both .c and .h if you want to use something like the wifi library.
+/// literally tried searching up for possible reasons as for why, even the error message i was getting while compiling,
+/// and absolutely nothing.
 namespace SlimeVR {
     struct WifiSerialCommand {
         SlimeVR::Logger logger = SlimeVR::Logger(Serial, "SlimeVR", "Wifi"); // the logger.

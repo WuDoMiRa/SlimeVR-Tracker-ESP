@@ -30,6 +30,7 @@
 //#include <ArduinoJson.hpp>
 
 SlimeVR::Logger logger(Serial,"SlimeVR");
+SlimeVR::SerialManager serialmng;
 #ifdef IMU==IMU_ICM42688
 	#include "IMU/ICM42688_drv.h"
 	SlimeVR::ICM42688_DRIVER imu1;
@@ -112,12 +113,11 @@ void setup() {
 	}
 	logger.print("Calibrating IMU.");
 }	
-
-
 void loop() {
 	imu1.update();
-	imu1.position_estimation();
-	SlimeVR::ReadSerial();
+	//serialmng.ReadSerial();
+	//imu1.position_estimation();
+	//SlimeVR::ReadSerial();
 	//logger.print("Max memory: %d, used memory: %d, freee memory: %d", ESP.getFlashChipSize(), ESP.getSketchSize(), ESP.getFreeSketchSpace());
 	//logger.print("Quat: %f %f %f %f", imu1.quat.W, imu1.quat.X, imu1.quat.Y, imu1.quat.Z);
 	//logger.print("Gryo: %f %f %f", imu1.gyro.X*(180/PI), imu1.gyro.Y*(180/PI), imu1.gyro.Z*(180/PI));

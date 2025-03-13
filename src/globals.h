@@ -28,7 +28,6 @@
 #include "consts.h"
 #include "debug.h"
 #include "defines.h"
-#include "IMU/IMU.h"
 
 
 #ifndef SECOND_IMU

@@ -1,0 +1,49 @@
+{
+    "files": [
+        {
+            "recursive": 1,
+            "hidden": 1
+        }   
+    ],
+    "lspclient": {
+        "servers": {
+            "c": {
+                "command": ["ccls", "-v", "0"],
+                "commandDebug": ["ccls", "-v", "2"],
+                "url": "https://github.com/MaskRay/ccls",
+                "highlightingModeRegex": "^(C|ANSI C89|Objective-C)$"
+            },  
+            "cpp": {
+                "use": "c",
+                "highlightingModeRegex": "^(C\+\+|ISO C\+\+|Objective-C\+\+)$"
+            }
+        }
+    },
+    "build": {
+        "build": "make all",
+        "clean": "make clean",
+        "install": "make upload",
+        "targets": [
+            {
+                "name": "build",
+                "build_cmd": "make all"
+            },
+            {
+                "name": "clean",
+                "build_cmd": "make clean"
+            },
+            {
+                "name": "upload",
+                "build_cmd": "make upload"
+            },
+            {
+                "name": "uploadfs",
+                "build_cmd": "make uploadfs"
+            },
+            {
+                "name": "proogram",
+                "build_cmd": "make program"
+            }
+        ]
+    }
+}

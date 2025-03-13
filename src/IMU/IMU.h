@@ -8,7 +8,6 @@
 #include "../gmath/src/Quaternion.hpp"
 #include "../gmath/src/Vector3.hpp"
 #include "../vqf/vqf/cpp/vqf.hpp"
-#include "../3DKalmanFilter/src/KalmanFilter3D.h"
 
 namespace SlimeVR {
     /// The IMU object for any IMUs.
@@ -52,9 +51,6 @@ namespace SlimeVR {
             //vqf_init();
         //}
 
-        /// @brief Position estimation. TODO: come back later to possibly initialize one of these parameters when doing calibration or something.
-        KalmanFilter3D position_estimation_filter = KalmanFilter3D(0.01, 0.5, 0.1);
-
         /// @brief Updates the VQF filter, and updates quaternion.
         void VQF_update() {
             // TODO: replace the VQF library EDIT: done
@@ -76,81 +72,7 @@ namespace SlimeVR {
         /// @brief This should apply any configurations given to this struct to the IMU.
         void configure();
 
-        
-        Vector3 rotateVectorByQuaternion(const Quaternion& q, const Vector3& v) {
-            // Implement quaternion vector rotation manually
-            Vector3 q_vec(q.X, q.Y, q.Z);
-            float q_w = q.W;
-            
-            Vector3 uv(q_vec.Y*v.Z - q_vec.Z*v.Y,
-                    q_vec.Z*v.X - q_vec.X*v.Z,
-                    q_vec.X*v.Y - q_vec.Y*v.X);
-                    
-            Vector3 uuv(q_vec.Y*uv.Z - q_vec.Z*uv.Y,
-                        q_vec.Z*uv.X - q_vec.X*uv.Z,
-                        q_vec.X*uv.Y - q_vec.Y*uv.X);
 
-            return Vector3(
-                v.X + 2.0f*(q_w*uv.X + uuv.X),
-                v.Y + 2.0f*(q_w*uv.Y + uuv.Y),
-                v.Z + 2.0f*(q_w*uv.Z + uuv.Z)
-            );
-        }
-        double vectorLength(const Vector3& v) {
-            return std::sqrt(v.X * v.X + v.Y * v.Y + v.Z * v.Z);
-        }
-        
-        /// @brief This will estimate the position of the IMU based off of the calibration data, and acceleration data..
-        void position_estimation() {
-            constexpr float GRAVITY = 9.80665f;
-            static uint64_t last_update = 0;
-            
-            // Calculate dt
-            uint64_t now = micros();
-            //float dt = (last_update > 0) ? (now - last_update) / 1e6f : 0;
-            //last_update = now;
-            //if(dt <= 0) dt = 0.01f;  // Default to 100Hz
-        
-            // Get orientation-compensated acceleration
-            Quaternion q = quat.Normalized(quat);
-            Vector3 accel_global = rotateVectorByQuaternion(q, acceleration);
-            
-            // Improved gravity removal with tilt compensation
-            Vector3 gravity = Vector3(0, 0, GRAVITY);
-            Vector3 linear_accel = accel_global - gravity;
-        
-            // Kalman prediction with proper acceleration integration
-            double accel_arr[3] = {linear_accel.X, linear_accel.Y, linear_accel.Z};
-            position_estimation_filter.predict(accel_arr);  // Modified predict()
-        
-            // Enhanced ZUPT with velocity measurement
-            if(isStationary()) {
-                double zero_vel[3] = {0, 0, 0};
-                position_estimation_filter.update(zero_vel, true);  // Velocity measurement
-            }
-        
-            // Get state with stability checks
-            double state[6];
-            position_estimation_filter.getState(state);
-            position = Vector3(state[0], state[1], state[2]);
-            velocity = Vector3(state[3], state[4], state[5]);
-        
-            // Reset on excessive drift
-            if(position.Z < -5.0) {  // Threshold based on your application
-                position_estimation_filter.resetState();
-            }
-        };
-
-        
-        /// @brief ZUPT implementation, suggestion by Deepseek.
-        bool isStationary() {
-            constexpr float GYRO_THRESH = 0.15f;   // ±15°/s
-            constexpr float ACCEL_THRESH = 0.3f;   // ±0.3 m/s²
-            constexpr float GRAVITY = 9.80665f;
-            
-            return (vectorLength(gyro) < GYRO_THRESH) && 
-                   (abs(vectorLength(acceleration) - GRAVITY) < ACCEL_THRESH);
-        }
     };
 }
 #endif
