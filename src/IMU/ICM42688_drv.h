@@ -44,7 +44,7 @@ namespace SlimeVR {
             /// Wanting a smaller binary rather than using a useless big library where you're mainly going to be using vector3's and quaternions.
             /// It's not even compiling because 'boost' doesn't exist
             /// instead replaced with 'gmath'.
-            rotation=quat.ToEuler(quat);
+            rotation=quat.normalized().toRotationMatrix().eulerAngles(0,1,2);
         };
     };    
 }

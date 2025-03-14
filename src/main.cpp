@@ -109,10 +109,17 @@ void setup() {
 	for ( auto &i : i2c_addresses ) {
 		logger.info("Device found at address 0x%x",i);
 	}
-	logger.print("Calibrating IMU.");
+	//logger.print("Calibrating IMU.");
 }	
 void loop() {
 	imu1.update();
+	//logger.print("Free stack: %u", esp_get_free_heap_size());
+	// code to check if we're using any position estimation filters
+	#if USE_KALMAN_FILTER
+	imu1.position_estimation();
+	logger.print("position: %f %f %f", imu1.position.x(), imu1.position.y(), imu1.position.z());
+	#endif
+
 	SMNGR.ReadSerial();
 	//serialmng.ReadSerial();
 	//imu1.position_estimation();
@@ -125,5 +132,5 @@ void loop() {
 	//logger.print("Position: %f %f %f", imu1.position.X, imu1.position.Y, imu1.position.Z);
 
 	// its not accurate anyway because of 1 second delays.
-	//delay(1000);
+	delay(1000);
 }

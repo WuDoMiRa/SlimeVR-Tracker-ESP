@@ -9,6 +9,12 @@
 #include "esp_wifi.h"
 #endif
 #include "cmds/wifi.h"
+#include <vector>
+/// TODO: in the future:
+// 1. make a base command class/struct
+// 2. make a vector variable here, that will contain all commands
+// 3. when checking if a command is called, iterate through the vector to
+// 		execute the commands dynamically. you still have to include them though.
 SlimeVR::WifiSerialCommand WifiCMD;
 namespace SlimeVR {
 	void SerialManager::ReadSerial() {
@@ -17,7 +23,8 @@ namespace SlimeVR {
 		static int buffer_index = 0;
 		while (Serial.available() > 0) {
 			char c = Serial.read();
-			if (c == '\n') {
+			/// added a check below so that we dont have a buffer overflow when reading from serial, potentially.
+			if ((c == '\n') || (buffer_index==256)) {
 				buffer[buffer_index] = '\0';
 				buffer_index = 0;
 

@@ -26,18 +26,26 @@
 // ================================================
 
 // Set parameters of IMU and board used
-#define IMU IMU_BNO085
+#define BOARD_WEMOSD1MINI 6
+#define IMU IMU_ICM42688
 #define SECOND_IMU IMU
-#define BOARD BOARD_SLIMEVR
+#define BOARD BOARD_WEMOSD1MINI
 #define IMU_ROTATION DEG_270
 #define SECOND_IMU_ROTATION DEG_270
 
 #define PRIMARY_IMU_OPTIONAL false
 #define SECONDARY_IMU_OPTIONAL true
+/// NOTE: from rubykyo: I cannot add a new define on windows that uses an enum otherwise I get this error: 'token "::" is not valid in preprocessor expressions'
+// when another define that does practically the same thing exists within this file. 
+#define USE_KALMAN_FILTER true
 
 #if BOARD != BOARD_GLOVE_IMU_SLIMEVR_DEV
-#define MAX_SENSORS_COUNT 2
+#define MAX_SENSORS_COUNT 1
 #define TRACKER_TYPE TrackerType::TRACKER_TYPE_SVR_ROTATION
+
+
+
+
 // Set I2C address here or directly in IMU_DESC_ENTRY for each IMU used
 // If not set, default address is used based on the IMU and Sensor ID
 // #define PRIMARY_IMU_ADDRESS_ONE 0x4a

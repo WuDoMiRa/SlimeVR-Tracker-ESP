@@ -48,6 +48,12 @@ enum class SensorTypeID {
 	Empty = 255
 };
 
+enum class PositionEstimationFilters {
+	Unknown = 0,
+	KALMAN,
+	Empty = 255
+};
+
 #define IMU_UNKNOWN ErroneousSensor
 #define IMU_MPU9250 MPU9250Sensor
 #define IMU_MPU6500 MPU6050Sensor

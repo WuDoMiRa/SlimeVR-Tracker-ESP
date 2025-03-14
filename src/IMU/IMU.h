@@ -5,11 +5,12 @@
 #include "../GlobalVars.h"
 #include "../globals.h"
 #include <memory>
-#include "../gmath/src/Quaternion.hpp"
-#include "../gmath/src/Vector3.hpp"
+#include "ArduinoEigen.h"
 #include "../vqf/vqf/cpp/vqf.hpp"
 
 namespace SlimeVR {
+    typedef Eigen::Vector3f Vector3;
+    typedef Eigen::Quaternion<float> Quaternion;
     /// The IMU object for any IMUs.
     /// ALL IMU OBJECTS THAT INHERIT FROM THIS CLASS MUST INCLUDE '_DRIVER' as the suffix in their name.
 
@@ -21,9 +22,11 @@ namespace SlimeVR {
     /// These classes/structs SHOULD NOT BE SENDING DATA! THEY SHOULD NOT BE IN CHARGE OF SENDING DATA!
     template<class T>
     struct IMUObj {
-        IMUObj() = default;
         SlimeVR::Logger logger = SlimeVR::Logger(Serial, "SlimeVR", "IMU");
         std::unique_ptr<T> imu_drv; // The underlying IMU driver that the IMU uses.
+        u8 update_hrtz = 120;
+        /// @brief Converts the `update_hrtz` into it's `ms` equivalent to equal 120 hertz a second for example.
+        double get_hrtz_ms(){return (1.0/update_hrtz)*1000.0;}
         Vector3 acceleration;
         Vector3 gyro;
         char* name;
@@ -54,13 +57,14 @@ namespace SlimeVR {
         /// @brief Updates the VQF filter, and updates quaternion.
         void VQF_update() {
             // TODO: replace the VQF library EDIT: done
-            vqf_real_t vqfgyr[3] = {gyro.X, gyro.Y, gyro.Z};
-            vqf_real_t vqfacc[3] = {acceleration.X, acceleration.Y, acceleration.Z};
+            vqf_real_t vqfgyr[3] = {gyro.x(), gyro.y(), gyro.z()};
+            vqf_real_t vqfacc[3] = {acceleration.x(), acceleration.y(), acceleration.z()};
             vqf_real_t vqfquat[4] = {0,0,0,0};
             vqf_filter.update(vqfgyr, vqfacc);
             vqf_filter.getQuat6D(vqfquat);
             //logger.print("VQF Quat: %f %f %f %f", vqfquat[0], vqfquat[1], vqfquat[2], vqfquat[3]);
-            quat = {vqfquat[0], vqfquat[1], vqfquat[2], vqfquat[3]};
+            //quat = {vqfquat[0], vqfquat[1], vqfquat[2], vqfquat[3]}; -- for gmath
+            quat = Quaternion(vqfquat[3], vqfquat[0], vqfquat[1], vqfquat[2]); // -- for eigen
         }
         /// @brief Initializes the IMU for usage.
         /// Also initializes other things like VQF if enabled. Returns 'true' if working.
@@ -72,7 +76,37 @@ namespace SlimeVR {
         /// @brief This should apply any configurations given to this struct to the IMU.
         void configure();
 
+        double PEF_dt;
+        // code to use the kalman filter
+        #if USE_KALMAN_FILTER 
+            #include "../kalmanfilter.h"
+            IMUKalmanFilter position_estimation_filter;
+            IMUObj(){
+                position_estimation_filter.initialize(
+                    Eigen::Vector3d(0,0,0),
+                    Eigen::Vector3d(0.1, -0.05, 0.2)
+                );
+                PEF_dt=get_hrtz_ms();
+            };
+            /// @brief Call this after VQF update.
+            void position_estimation() {
+                Eigen::Vector3d acc_global = to_global_frame(acceleration.cast<double>(), quat.cast<double>());
+                acc_global[2] -= CONST_EARTH_GRAVITY;
 
+                position_estimation_filter.predict(PEF_dt);
+                position_estimation_filter.update(acc_global);
+                Eigen::Vector3d PEF_position=position_estimation_filter.get_position();
+                Eigen::Vector3d PEF_velocity=position_estimation_filter.get_velocity();
+                position=PEF_position.cast<float>();
+                velocity=PEF_velocity.cast<float>();
+                //position=position_estimation_filter.get_position().cast<float>();
+                //velocity=position_estimation_filter.get_velocity().cast<float>();
+                //auto PEF_position=position_estimation_filter.get_position();
+                //auto PEF_velocity=position_estimation_filter.get_velocity();
+                //position=Vector3(PEF_position.x(),PEF_position.y(),PEF_position.z());
+                //velocity=Vector3(PEF_velocity.x(),PEF_velocity.y(),PEF_velocity.z());
+            };
+        #endif
     };
 }
 #endif
