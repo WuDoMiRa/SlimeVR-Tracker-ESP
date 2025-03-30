@@ -15,8 +15,11 @@
 // 2. make a vector variable here, that will contain all commands
 // 3. when checking if a command is called, iterate through the vector to
 // 		execute the commands dynamically. you still have to include them though.
-SlimeVR::WifiSerialCommand WifiCMD;
+WifiSerialCommand WifiCMD;
 namespace SlimeVR {
+	void SerialManager::SetupCMDs() {
+		WifiCMD.setup();
+	};
 	void SerialManager::ReadSerial() {
 		SlimeVR::Logger logger(Serial, "SlimeVR", "Serial Commands"); // the logger.
 		static char buffer[256];
@@ -82,14 +85,31 @@ namespace SlimeVR {
 				// you cannot exactly have a 'dynamic' implementation unfortunately in C, C++.
 
 				// Make a switch that checks the prefix, and then runs the command.
+				
 
 				/// TODO: There's an issue with serial commands where:
 				// text could appear to be 'wifi' on the terminal, but the check below fails and just defaults to unknown command, which means the check is failing.
 				// might be hidden characters at play EDIT: it was. hidden characters are (\n,\r,\t, etc.)
 				if (lowercaseprefix==WifiCMD.name) {
 					return WifiCMD.run(arguments);
+				//} else if (lowercaseprefix==CalibrateCMD.name) {
+				//	return CalibrateCMD.run(arguments);
+				} else if (lowercaseprefix == "help") {
+					logger.print("Available commands: wifi, calibrate");
+				} else if (lowercaseprefix == "exit") {
+					logger.print("Exiting command mode.");
+					return;
+				} else if (lowercaseprefix == "clear") {
+					Serial.flush();
+					Serial.println("\033[2J\033[H"); // ANSI escape code to clear the screen
+				} else if (lowercaseprefix == "reset") {
+					ESP.restart(); // Restart the ESP32
+				} else {
+					//logger.warn("Unknown command: %s", prefix.c_str());
+					//logger.debug("What I received: %s, wifi command name: %s", lowercaseprefix, WifiCMD.name);
+					logger.warn("Unknown command: %s", prefix.c_str());
 				}
-				logger.print("Unknown command: %s", prefix.c_str());
+				//logger.print("Unknown command: %s", prefix.c_str());
 				//delay(100);
 				//logger.debug("What I received: %s, wifi command name: %s", lowercaseprefix, WifiCMD.name);
 			} else {

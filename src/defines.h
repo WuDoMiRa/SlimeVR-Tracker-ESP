@@ -37,7 +37,7 @@
 #define SECONDARY_IMU_OPTIONAL true
 /// NOTE: from rubykyo: I cannot add a new define on windows that uses an enum otherwise I get this error: 'token "::" is not valid in preprocessor expressions'
 // when another define that does practically the same thing exists within this file. 
-#define USE_KALMAN_FILTER true
+#define USE_POSITION_ESTIMATION_FILTER true
 
 #if BOARD != BOARD_GLOVE_IMU_SLIMEVR_DEV
 #define MAX_SENSORS_COUNT 1
@@ -286,8 +286,8 @@ PIN_IMU_SDA, PRIMARY_IMU_OPTIONAL, BMI160_QMC_REMAP) \
 #define PIN_IMU_INT D5
 #define PIN_IMU_INT_2 D6
 #define PIN_BATTERY_LEVEL A0
-//  #define LED_PIN 2
-//  #define LED_INVERTED true
+#define LED_PIN 2 // why were these commented out?
+#define LED_INVERTED true
 #ifndef BATTERY_SHIELD_RESISTANCE
 #define BATTERY_SHIELD_RESISTANCE 180
 #endif

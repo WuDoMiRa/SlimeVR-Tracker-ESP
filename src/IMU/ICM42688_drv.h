@@ -17,7 +17,7 @@ namespace SlimeVR {
         char* name = "ICM42688";
         //int id = 6;  --- I don't know the id.
         
-        bool imu_init() {
+        bool imu_init() override {
             imu_drv = std::make_unique<ICM42688_FIFO>(ICM42688_FIFO(Wire, 0x68, PIN_IMU_SDA, PIN_IMU_SCL));
             // configuration imu driver side
             return ( // all of this should return true if all of these are successful. did this to avoid checking if status is error every single one of these calls.
@@ -29,7 +29,7 @@ namespace SlimeVR {
             );
         };
 
-        void update() {
+        void update() override {
             if (!(imu_drv->getAGT()>0)){
                 // we cannot get new data.
                 logger.error("Failed to get new data from the IMU.");

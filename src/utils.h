@@ -27,5 +27,15 @@
 #define UNPACK_VECTOR(V) V.x, V.y, V.z
 #define UNPACK_VECTOR_ARRAY(V) V[0], V[1], V[2]
 #define UNPACK_QUATERNION(Q) Q.x, Q.y, Q.z, Q.w
+namespace SlimeVR {
+	/// @brief Turn on LED.
+	void led_on();
+	/// @brief Turn off LED.
+    void led_off();
+	/// @brief Flash LED a number of times with a delay between each flash.
+    void led_flash(int times=2, int delaytime=1);
+	/// @brief Blink LED with a delay between each blink.
+    void led_blink(int delaytime=1);
+};
 
 #endif

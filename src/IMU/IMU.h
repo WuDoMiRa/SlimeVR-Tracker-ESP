@@ -27,17 +27,22 @@ namespace SlimeVR {
         u8 update_hrtz = 120;
         /// @brief Converts the `update_hrtz` into it's `ms` equivalent to equal 120 hertz a second for example.
         double get_hrtz_ms(){return (1.0/update_hrtz)*1000.0;}
-        Vector3 acceleration;
-        Vector3 gyro;
+        Vector3 acceleration; // X is the first element, Y is the third element, Z is the second element. (X,Z,Y).
+        Vector3 gyro; // rotation of the IMU.
         char* name;
         int id;
         int address;
         int fifo_size = 64;
 
-        Vector3 position;
-        Vector3 velocity;
+        Vector3 position; // Position of the tracker.
+        Vector3 velocity; // Speed of the tracker.
         Vector3 rotation; // rotation is in RADIANS.
         Quaternion quat; // a quaternion only has 4 values so therefore vec4
+
+        Vector3 position_threshold; // Threshold of the position.
+        Vector3 acceleration_threshold; // Threshold of the acceleration.
+        Vector3 gyro_threshold; // Threshold of the gyro.
+        Vector3 velocity_threshold; // Threshold of the velocity.
 
         /// TODO: have a dynamic filter, although
         /// instead of implementing these filters in the drivers,
@@ -54,7 +59,7 @@ namespace SlimeVR {
             //vqf_init();
         //}
 
-        /// @brief Updates the VQF filter, and updates quaternion.
+        /// @brief Updates the VQF filter, and updates `quat` (quaternion).
         void VQF_update() {
             // TODO: replace the VQF library EDIT: done
             vqf_real_t vqfgyr[3] = {gyro.x(), gyro.y(), gyro.z()};
@@ -68,37 +73,40 @@ namespace SlimeVR {
         }
         /// @brief Initializes the IMU for usage.
         /// Also initializes other things like VQF if enabled. Returns 'true' if working.
-        bool imu_init();
+        virtual bool imu_init(){ return false; };
 
         /// @brief Updates acceleration and gyro.
-        void update();
+        virtual void update(){};
 
         /// @brief This should apply any configurations given to this struct to the IMU.
         void configure();
 
         double PEF_dt;
         // code to use the kalman filter
-        #if USE_KALMAN_FILTER 
-            #include "../kalmanfilter.h"
-            IMUKalmanFilter position_estimation_filter;
+        #if USE_POSITION_ESTIMATION_FILTER 
+            #include "../deadreckoning.h"
+            /// TODO: make this apart of calibration instead of hard-coded.
+            DeadReckoning position_estimation_filter;
             IMUObj(){
-                position_estimation_filter.initialize(
-                    Eigen::Vector3d(0,0,0),
-                    Eigen::Vector3d(0.1, -0.05, 0.2)
-                );
+                Eigen::Vector3f initialAccel(0.0f, 0.0f, 9.81f); 
+                position_estimation_filter.initialize(initialAccel,micros());
                 PEF_dt=get_hrtz_ms();
             };
             /// @brief Call this after VQF update.
             void position_estimation() {
-                Eigen::Vector3d acc_global = to_global_frame(acceleration.cast<double>(), quat.cast<double>());
-                acc_global[2] -= CONST_EARTH_GRAVITY;
+                //Eigen::Vector3d acc_global = to_global_frame(acceleration.cast<double>(), quat.cast<double>());
+                //acc_global[2] -= CONST_EARTH_GRAVITY;
 
-                position_estimation_filter.predict(PEF_dt);
-                position_estimation_filter.update(acc_global);
-                Eigen::Vector3d PEF_position=position_estimation_filter.get_position();
-                Eigen::Vector3d PEF_velocity=position_estimation_filter.get_velocity();
-                position=PEF_position.cast<float>();
-                velocity=PEF_velocity.cast<float>();
+                //position_estimation_filter.predict(PEF_dt);
+                //position_estimation_filter.update(acc_global);
+                //Eigen::Vector3d PEF_position=position_estimation_filter.get_position();
+                //Eigen::Vector3d PEF_velocity=position_estimation_filter.get_velocity();
+                //position=PEF_position.cast<float>();
+                //velocity=PEF_velocity.cast<float>();
+                position_estimation_filter.update(acceleration,gyro, micros());
+                position=position_estimation_filter.getPosition();
+                quat = position_estimation_filter.getOrientation();
+                velocity=position_estimation_filter.getVelocity();
                 //position=position_estimation_filter.get_position().cast<float>();
                 //velocity=position_estimation_filter.get_velocity().cast<float>();
                 //auto PEF_position=position_estimation_filter.get_position();

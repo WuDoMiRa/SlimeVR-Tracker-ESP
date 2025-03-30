@@ -24,10 +24,9 @@
 #define SLIMEVR_GLOBALS_H_
 
 #include <Arduino.h>
-
-#include "consts.h"
-#include "debug.h"
+#include "options.h"
 #include "defines.h"
+
 
 
 #ifndef SECOND_IMU

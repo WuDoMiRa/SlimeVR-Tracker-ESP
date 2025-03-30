@@ -24,16 +24,19 @@
 #ifndef GLOBALVARS_H
 #define GLOBALVARS_H
 
-#include <LittleFS.h>
 #include <arduino-timer.h>
+#include "defines.h"
+#include "options.h"
 #include "logging/Logger.h"
-#include "FSConfig/FSConfig.hpp"
 #include "serial_commands/serial_mgn.h"
 #include "IMU/IMU.h"
+#include "declarations.h"
+#include "utils.h"
+#include "FS/FS.h"
 
 //extern Timer<> globalTimer;
 //extern SlimeVR::Logger logger(Serial,"SlimeVR");
 extern SlimeVR::SerialManager serialmgn;
-
+//extern SlimeVR::FS filesystem;
 
 #endif
