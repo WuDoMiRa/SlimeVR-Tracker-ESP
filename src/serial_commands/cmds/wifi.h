@@ -40,13 +40,12 @@ struct WifiSerialCommand : BaseCommand {
 
     void setup() override {
         WiFi.setOutputPower(0); logger.debug("Wifi output power set to 0."); delay(100);
-        WiFi.persistent(false); logger.debug("Wifi persistent set to false."); delay(100);
+        WiFi.persistent(true); logger.debug("Wifi persistent set to true."); delay(100);
         WiFi.mode(WIFI_STA); logger.debug("Wifi mode set to station."); delay(100);
         WiFi.setPhyMode(WIFI_PHY_MODE_11N); logger.debug("Wifi phy mode set to 11n."); delay(100);
         WiFi.hostname("SlimeVR FBT Tracker"); logger.debug("Wifi hostname set to SlimeVR FBT Tracker."); delay(100);
-        //WiFi.begin(); logger.debug("Wifi begin."); delay(100); - crashes the device?
-        delay(2000); // wait for wifi to initialize
-        logger.debug("Wifi initialized."); delay(100);
+        WiFi.begin(); logger.debug("Wifi begin."); // Should connect to last used access point, see
+        // https://arduino-esp8266.readthedocs.io/en/latest/esp8266wifi/station-class.html#begin
     }
 
     /// Begins listening on a port.

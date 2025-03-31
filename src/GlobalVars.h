@@ -33,10 +33,12 @@
 #include "declarations.h"
 #include "utils.h"
 #include "FS/FS.h"
+#include "taskmanager/tskmng.h"
 
 //extern Timer<> globalTimer;
 //extern SlimeVR::Logger logger(Serial,"SlimeVR");
 extern SlimeVR::SerialManager serialmgn;
+extern SlimeVR::TaskManager taskmng;
 //extern SlimeVR::FS filesystem;
 
 #endif

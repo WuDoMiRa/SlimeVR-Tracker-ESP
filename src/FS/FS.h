@@ -6,6 +6,7 @@
 #include <vector>
 namespace SlimeVR {
     typedef ArduinoJson::JsonDocument JsonDocument;
+    typedef ArduinoJson::JsonArray JsonArray;
     /// @brief File system class, used for reading and writing JSON files to the file system.
     /// This is an improvement over SlimeVR's current FileSystem class, as previously everything is hard coded (no dynamic saving/loading on request) and instead not correctly
     /// abstracted to my liking, or rather, not useful enough for the future, so this class is going to basically let anyone

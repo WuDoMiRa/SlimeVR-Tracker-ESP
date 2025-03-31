@@ -1,7 +1,8 @@
 #include "IMU.h"
 #include "ICM42688.h"
 namespace SlimeVR {
-    struct ICM42688_DRIVER : IMUObj<ICM42688_FIFO> {
+    struct ICM42688_DRIVER : public IMUObj {
+        std::unique_ptr<ICM42688_FIFO> imu_drv;
         ICM42688_DRIVER(){
             /// TODO: warning! setting parameters like this may require double defines based on what filter we'd like!
             // set parameters
@@ -32,7 +33,7 @@ namespace SlimeVR {
         void update() override {
             if (!(imu_drv->getAGT()>0)){
                 // we cannot get new data.
-                logger.error("Failed to get new data from the IMU.");
+                logger.error("Failed to get new data from the IMU."); return;
             }
             acceleration={imu_drv->accX(),imu_drv->accY(),imu_drv->accZ()}; // update accel
             gyro={imu_drv->gyrX(),imu_drv->gyrY(),imu_drv->gyrZ()}; // update gyro

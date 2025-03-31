@@ -20,10 +20,10 @@ namespace SlimeVR {
     /// This localizes things and makes things easier for developers, this rewrite was necessary. in fact, you could get even less packets a cycle
     /// by batching all packets in-of itself, instead of sending things seperately like before, like imu rot, accel, and sometimes battery.
     /// These classes/structs SHOULD NOT BE SENDING DATA! THEY SHOULD NOT BE IN CHARGE OF SENDING DATA!
-    template<class T>
+    //template<class T>
     struct IMUObj {
         SlimeVR::Logger logger = SlimeVR::Logger(Serial, "SlimeVR", "IMU");
-        std::unique_ptr<T> imu_drv; // The underlying IMU driver that the IMU uses.
+        //std::unique_ptr<T> imu_drv; // The underlying IMU driver that the IMU uses.
         u8 update_hrtz = 120;
         /// @brief Converts the `update_hrtz` into it's `ms` equivalent to equal 120 hertz a second for example.
         double get_hrtz_ms(){return (1.0/update_hrtz)*1000.0;}
@@ -115,6 +115,7 @@ namespace SlimeVR {
                 //velocity=Vector3(PEF_velocity.x(),PEF_velocity.y(),PEF_velocity.z());
             };
         #endif
+        //virtual ~IMUBase() = default;
     };
 }
 #endif
