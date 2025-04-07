@@ -70,32 +70,48 @@ namespace SlimeVR {
     /// @brief TaskManager is a class that manages tasks.
     struct TaskManager {
         SlimeVR::Logger logger = SlimeVR::Logger(Serial,"SlimeVR","TaskManager"); // The logger for the task.
-        std::vector<Task*> tasks; // The list of task pointers.
+        std::vector<std::shared_ptr<Task>> tasks; // Managed task pointers
         unsigned long lastRunTime; // The last time the task manager ran. This is used to calculate the time since the last run.
 
         /// TODO: use-after-free is occuring because, when a task is created out of scope `main.cpp` and `addTask` is called,
         /// the variable is now deleted as soon as it leaves scope, and therefore
         /// now we have a freed variable that wont do anything inside of the list of tasks. 
-        void addTask(Task& task) {
-            tasks.push_back(&task);
+        void addTask(std::shared_ptr<Task> task) {
+            tasks.push_back(task);
         };
-        void removeTask(Task& task) {
-            for (size_t i = 0; i < tasks.size(); i++) {
-                if ((*tasks[i]).state == task.state) { // Check if the task is the same as the one we want to remove.
-                    tasks.erase(tasks.begin() + i); // Remove the task from the list.
-                    break; // Break out of the loop.
-                }
-            }
+        void removeTask(std::shared_ptr<Task> task) {
+            tasks.erase(
+                std::remove_if(tasks.begin(), tasks.end(),
+                    [&task](const auto& t) { return t->state == task->state; }),
+                tasks.end()
+            );
         };
+        
+        ~TaskManager() {
+            tasks.clear();
+        }
 
         void runTasks() {
-            logger.debug("Running tasks.");
-            unsigned long currentTime = millis(); // Get the current time.
-            for (size_t i = 0; i < tasks.size(); i++) {
-                Task* task = tasks[i];
+            // Enhanced stack protection
+            volatile uint32_t stackCanary;
+            __asm__ __volatile__ ("mov %0, sp" : "=r" (stackCanary));
+            if(stackCanary < 0x3FFE8000) {
+                logger.error("STACK SMASH DETECTED! SP: 0x%08x", stackCanary);
+                ESP.reset();
+            }
+            
+            if(stackCanary < 0x3FFE8000) { // Check stack pointer is in valid range
+                logger.error("Stack corruption detected!");
+                ESP.reset();
+            }
+
+            unsigned long currentTime = millis();
+            ESP.wdtFeed();
+            for (auto& task : tasks) {
+                ESP.wdtDisable();
                 if (task->type == RUN_ONCE) {
                     task->func(task->state); // Run the task.
-                    removeTask(*task); // Remove the task after running it.
+                    removeTask(task); // Remove the task after running it.
                 } else if (task->type == RUN_EVERY_CYCLE) {
                     task->func(task->state); // Run the task.
                 } else if (task->type == RUN_EVERY_CYCLE_WITH_INTERVAL) {
@@ -103,6 +119,7 @@ namespace SlimeVR {
                         task->func(task->state); // Run the task.
                     }
                 }
+                ESP.wdtEnable(100); // Re-enable WDT after task execution
             }
             lastRunTime = currentTime; // Update the last run time.
         };

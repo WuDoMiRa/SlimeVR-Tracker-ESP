@@ -37,7 +37,11 @@
 #define SECONDARY_IMU_OPTIONAL true
 /// NOTE: from rubykyo: I cannot add a new define on windows that uses an enum otherwise I get this error: 'token "::" is not valid in preprocessor expressions'
 // when another define that does practically the same thing exists within this file. 
-#define USE_POSITION_ESTIMATION_FILTER true
+#define USE_POSITION_ESTIMATION_FILTER false
+
+// WIFI data (unused currently)
+#define WIFI_SSID ""
+#define WIFI_PASSWORD ""
 
 #if BOARD != BOARD_GLOVE_IMU_SLIMEVR_DEV
 #define MAX_SENSORS_COUNT 1

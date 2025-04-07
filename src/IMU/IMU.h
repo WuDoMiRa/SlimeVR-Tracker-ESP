@@ -39,6 +39,15 @@ namespace SlimeVR {
         Vector3 rotation; // rotation is in RADIANS.
         Quaternion quat; // a quaternion only has 4 values so therefore vec4
 
+        /// These directions will end up having 1 on a specific axis for their respective directions, the rest 0.
+        /// To make these directions useful you can do multiplication or check which direction the IMU is facing with these directions.
+        Vector3 UpDir; // Format is XZY.
+        Vector3 DownDir; // Format is XZY.
+        Vector3 LeftDir; // Format is XZY.
+        Vector3 RightDir; // Format is XZY.
+        Vector3 FrontDir; // Format is XZY.
+        Vector3 BackDir; // Format is XZY.
+
         Vector3 position_threshold; // Threshold of the position.
         Vector3 acceleration_threshold; // Threshold of the acceleration.
         Vector3 gyro_threshold; // Threshold of the gyro.

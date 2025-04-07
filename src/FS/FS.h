@@ -6,6 +6,7 @@
 #include <vector>
 namespace SlimeVR {
     typedef ArduinoJson::JsonDocument JsonDocument;
+    typedef ArduinoJson::DynamicJsonDocument DynJsonDocument;
     typedef ArduinoJson::JsonArray JsonArray;
     /// @brief File system class, used for reading and writing JSON files to the file system.
     /// This is an improvement over SlimeVR's current FileSystem class, as previously everything is hard coded (no dynamic saving/loading on request) and instead not correctly
@@ -13,7 +14,24 @@ namespace SlimeVR {
     /// save and read json files from the filesystem, which allows for dynamic data saving and loading, without even needing to touch this abstraction,
     /// compared to SlimeVR's stock abstraction.
     struct FS {
-        SlimeVR::Logger logger = SlimeVR::Logger(Serial, "SlimeVR", "FS"); // the logger.
+        SlimeVR::Logger logger = SlimeVR::Logger(Serial, "SlimeVR", "FS");
+        
+        bool safeFileOperation(const char* filepath, const char* mode, std::function<bool(File&)> op) {
+            ESP.wdtDisable();
+            noInterrupts();
+            bool result = false;
+            if(ESP.getFreeHeap() > 25000) {
+                File file = LittleFS.open(filepath, mode);
+                if(file) {
+                    result = op(file);
+                    file.close();
+                }
+            }
+            interrupts();
+            ESP.wdtEnable(100);
+            return result;
+        }
+
         FS() {
             if (!LittleFS.begin()) {
                 logger.error("Failed to mount LittleFS filesystem. Reformatting?");

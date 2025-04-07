@@ -10,7 +10,7 @@ namespace SlimeVR {
     void Logger::print(const char* format, ...) {
         va_list args;
         va_start(args, format);
-        char buf[256];
+        char buf[128];
         vsnprintf(buf, sizeof(buf), format, args);
         va_end(args);
 
@@ -28,7 +28,7 @@ namespace SlimeVR {
     void Logger::warn(const char* format, ...) {
         va_list args;
         va_start(args, format);
-        char buf[256];
+        char buf[128];
         vsnprintf(buf, sizeof(buf), format, args);
         va_end(args);
 
@@ -47,7 +47,7 @@ namespace SlimeVR {
     void Logger::error(const char* format, ...) {
         va_list args;
         va_start(args, format);
-        char buf[256];
+        char buf[128];
         vsnprintf(buf, sizeof(buf), format, args);
         va_end(args);
 
@@ -66,7 +66,7 @@ namespace SlimeVR {
     void Logger::debug(const char* format, ...) {
         va_list args;
         va_start(args, format);
-        char buf[256];
+        char buf[128];
         vsnprintf(buf, sizeof(buf), format, args);
         va_end(args);
 
@@ -85,7 +85,7 @@ namespace SlimeVR {
     void Logger::info(const char* format, ...) {
         va_list args;
         va_start(args, format);
-        char buf[256];
+        char buf[128];
         vsnprintf(buf, sizeof(buf), format, args);
         va_end(args);
 

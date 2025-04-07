@@ -30,6 +30,8 @@
 
 /// TASKS
 #include "tasks/calibration.h"
+#include "tasks/server_connection.h"
+
 
 //#include "tasks/calibration.h"
 //#include <ArduinoJson.hpp>
@@ -39,32 +41,55 @@ SlimeVR::SerialManager SMNGR;
 std::vector<byte> i2c_addresses;
 SlimeVR::FS filesystem;
 SlimeVR::TaskManager taskmng; // Task manager for the tasks.
-SlimeVR::JsonDocument tracker_config; // settings for the tracker.
+//SlimeVR::JsonDocument tracker_config; // settings for the tracker.
+/// TODO: Create a variable here that tells us where the path of the tracker config is.
 // IMU Declarations 
 #ifdef IMU==IMU_ICM42688 
     #include "IMU/ICM42688_drv.h"
     SlimeVR::ICM42688_DRIVER imu1;
 #endif
+#include "tasks/upkeep_wifi.h"
 
 std::optional<SlimeVR::ICM42688_DRIVER> imu2 = std::nullopt; // optional IMU2, if present.
 //SlimeVR::FSConfig fsConfig;
-//ArduinoJson::JsonDocument tracker_config;
+ArduinoJson::JsonDocument* tracker_config = new ArduinoJson::JsonDocument();
+/// WARNING: .containsKey and .contains will CRASH the firmware if you use them! It's better to do tracker_config["key"].isNull() instead!
 void setup() {
-	//if (!fsConfig.fileExists("/config.json")) {
-	//	logger.warn("Config file not found. Creating default config.");
+    //ESP.wdtDisable(); // Disable WDT during setup
+    //ESP.wdtFeed(); // Feed watchdog before critical sections
+    bool ReadConfigSuccessfully = false;
+    //if (!fsConfig.fileExists("/config.json")) {
+    //    logger.warn("Config file not found. Creating default config.");
 	//	fsConfig.SaveJSON("/config.json", tracker_config);
 	//}
+	//const size_t CAPACITY = JSON_OBJECT_SIZE(3) + 3*JSON_ARRAY_SIZE(3);
+	//tracker_config.allocator()->allocate(CAPACITY);
 
 	pinMode(LED_PIN, OUTPUT); // set up LED
 	SlimeVR::led_on();
 	Serial.begin(serialBaudRate);
 	logger.print("Booting up");
+	if (!filesystem.exists("/config.json")) {
+		logger.error("Config file not found. Creating default config.");
+		filesystem.createFile("/config.json");
+	} else {
+		logger.print("Config file found. Reading config file.");
+		ReadConfigSuccessfully = filesystem.readJSON("/config.json", *tracker_config);
+		if (!ReadConfigSuccessfully) {
+			logger.error("Failed to read config file. Creating default config.");
+			filesystem.createFile("/config.json");
+		} else {
+			logger.print("Config file read successfully.");
+		}
+	}
 	//if (!filesystem.exists("/config.json")) {
 	//	logger.error("Config file not found. Creating default config.");
 	//	filesystem.createFile("/config.json");
 	//} else {
 	//	if (!filesystem.readJSON("/config.json", tracker_config)) {
 	//		logger.error("Failed to read config file.");
+	//	} else {
+	//
 	//	}
 	//}
 	// check if calibration.imu1.accelthres exists, and if so, set the threshold to imu1 rn
@@ -111,6 +136,18 @@ void setup() {
 		logger.error("Failed to initialize the primary IMU.");
 	} else {
 		logger.print("Successfully initialized primary IMU %s.", imu1.name);
+		//if (!(*tracker_config)["calibration"].isNull()) {
+		//	imu1.acceleration_threshold=SlimeVR::Vector3(
+		//		(*tracker_config)["calibration"]["imu1"]["accelthres"][0],
+		//		(*tracker_config)["calibration"]["imu1"]["accelthres"][1],
+		//		(*tracker_config)["calibration"]["imu1"]["accelthres"][2]
+		//	);
+
+		//	imu1.gyro_threshold=SlimeVR::Vector3(
+		//		(*tracker_config)["calibration"]["imu1"]["gyrothres"][0],
+		//		(*tracker_config)["calibration"]["imu1"]["gyrothres"][1],
+		//		(*tracker_config)["calibration"]["imu1"]["gyrothres"][2]
+		//	);}
 		//imu1.VQF_init();
 	}
 
@@ -135,30 +172,88 @@ void setup() {
 			logger.error("Device did not acknowledge the address: 0x%d",address);
 		}
 	}
-	logger.print("Found %d I2C devices.",i2c_addresses.size());
+	//logger.print("Found %d I2C devices.",i2c_addresses.size());
 	for ( auto &i : i2c_addresses ) {
 		logger.info("Device found at address 0x%x",i);
 	}
-	SlimeVR::CalibrationTask* CalTask = new SlimeVR::CalibrationTask(); // Dynamically create to extend lifetime. If you don't do this for any new task, you risk `use-after-free` (using a variable after its been freed) which causes crashes on the tracker.
-	CalTask->state["imu1"] = static_cast<SlimeVR::IMUObj*>(&imu1); // set the imu1 in the state of the task.
-	CalTask->state["tracker_config"] = &tracker_config; // set the tracker config in the state of the task.
-	CalTask->state["filesystem"] = &filesystem; // set the filesystem in the state of the task.
+	auto CalTask = std::make_shared<SlimeVR::CalibrationTask>(); // Using shared_ptr for automatic memory management
+	CalTask->state["imu1"] = static_cast<SlimeVR::IMUObj*>(&imu1);
+	CalTask->state["tracker_config"] = tracker_config;
+	CalTask->state["filesystem"] = &filesystem;
 	CalTask->init();
-	taskmng.addTask(*CalTask); // add the calibration task to the task manager.
+	taskmng.addTask(CalTask); 
 
+	// Add server connection task
+	auto ServerTask = std::make_shared<SlimeVR::ServerConnectionTask>();
+	ServerTask->state["imu1"] = static_cast<SlimeVR::IMUObj*>(&imu1);
+	ServerTask->state["tracker_config"] = tracker_config;
+	ServerTask->state["filesystem"] = &filesystem;
+	ServerTask->init();
+	taskmng.addTask(ServerTask);
+
+	auto UKWifiTask = std::make_shared<SlimeVR::UpkeepWifiTask>();
+	UKWifiTask->init();
+	taskmng.addTask(UKWifiTask);
 	//logger.print("Calibrating IMU.");
 	//imu1.position_estimation_filter.calibrateBiases(imu1.acceleration_threshold, imu1.gyro_threshold); // calibrate the biases of the IMU.
 	SMNGR.SetupCMDs();
 }	
+unsigned long last_imu_update = millis();
 void loop() {
 	imu1.update();
-	#if USE_POSITION_ESTIMATION_FILTER
+	#if USE_POSITION_ESTIMATION_FILTER // use a filter
 	imu1.position_estimation();
 	logger.print("position: %f %f %f", imu1.position.x(), imu1.position.y(), imu1.position.z());
 	logger.print("velocity: %f %f %f", imu1.velocity.x(), imu1.velocity.y(), imu1.velocity.z());
 	logger.print("gyro threshold: %f %f %f", imu1.gyro_threshold.x(), imu1.gyro_threshold.y(), imu1.gyro_threshold.z());
 	logger.print("accel threshold: %f %f %f", imu1.acceleration_threshold.x(), imu1.acceleration_threshold.y(), imu1.acceleration_threshold.z());
+	#else // we will simply use acceleration threshold and gyro threshold.
+	//if ((*tracker_config)["time_to_accumulate_bias"].isNull()) {
+	//	logger.error("You need to calibrate your tracker first! Reboot while having the IMU facing flat upside down to start the calibration process!");
+		//delay(1000);
+		//taskmng.runTasks(); // do calibration proc if we can
+		//return;
+	//} else {
+	//	bool isMoving = (imu1.acceleration.array().cwiseAbs() >= imu1.acceleration_threshold.array().cwiseAbs()).any();
+	//	unsigned long TTAB = (*tracker_config)["time_to_accumulate_bias"];
+	//	if (TTAB == 0) TTAB = 1; // Safety
+	//	SlimeVR::Vector3 BDM = SlimeVR::Vector3((*tracker_config)["bias_during_movement"][0],(*tracker_config)["bias_during_movement"][1],(*tracker_config)["bias_during_movement"][2]);
+	//	static unsigned long lastMotionTime = 0;
+
+	//	if (isMoving) {
+			// acceleration is greater than the threshold XZY format
+			//if (imu1.acceleration.cwiseAbs().x()>imu1.acceleration_threshold.cwiseAbs().x()) { imu1.position[0]+=(imu1.acceleration-imu1.acceleration_threshold).x();}
+			//if (imu1.acceleration.cwiseAbs().y()>imu1.acceleration_threshold.cwiseAbs().y()) { imu1.position[1]+=(imu1.acceleration-imu1.acceleration_threshold).y();}
+			//if (imu1.acceleration.cwiseAbs().z()>imu1.acceleration_threshold.cwiseAbs().z()) { imu1.position[2]+=(imu1.acceleration-imu1.acceleration_threshold).z();}
+			// deepseek improved this to not use if statemenmts below, with edits from me
+	//		unsigned long currentTime = millis();
+	//		unsigned long deltaTime = (lastMotionTime == 0) ? 0 : currentTime - lastMotionTime;
+	//		lastMotionTime = currentTime;
+		
+	//		auto mask = (imu1.acceleration.array().cwiseAbs() >= imu1.acceleration_threshold.array().cwiseAbs()).cast<float>();
+	//		SlimeVR::Vector3 excess = (imu1.acceleration.array() - imu1.acceleration_threshold.array()) * mask;
+			
+	//		float timeRatio = static_cast<float>(deltaTime) / TTAB;
+	//		SlimeVR::Vector3 adjustment = excess.cwiseProduct(BDM) * (timeRatio * timeRatio);
+	//		imu1.position += adjustment;
+		
+	//		logger.debug("Adjustment: %.2f, %.2f, %.2f", adjustment.x(), adjustment.y(), adjustment.z());
+	//	} else {
+			// assume still movement here/tracker is still.
+	//		logger.debug("Tracker is assumed to be still.");
+	//		lastMotionTime = 0; // Reset on stillness // not meaningful but ok
+	//	}
+	//	logger.print("position: %f %f %f", imu1.position.x(), imu1.position.y(), imu1.position.z());
+	//	logger.debug("Accel: %.2f, %.2f, %.2f | Threshold: %.2f, %.2f, %.2f",
+	//		imu1.acceleration.x(), imu1.acceleration.y(), imu1.acceleration.z(),
+	//		imu1.acceleration_threshold.x(), imu1.acceleration_threshold.y(), imu1.acceleration_threshold.z()
+	//	);
+		//if ((millis()-last_imu_update)>=imu1.get_hrtz_ms()){last_imu_update=millis()}
+	//}
 	#endif
 	taskmng.runTasks(); // run the tasks.
 	SMNGR.ReadSerial();
+	//delay(1);
+	//ESP.wdtFeed(); // feed the watchdog
+	//Serial.println("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
 }

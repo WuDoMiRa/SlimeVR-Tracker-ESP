@@ -38,14 +38,17 @@ struct WifiSerialCommand : BaseCommand {
     bool fallback_11g=false;
     bool fallback_11b=false;
 
+    bool provisioning=false; // Whether or not we are provisioning the device.
+
     void setup() override {
-        WiFi.setOutputPower(0); logger.debug("Wifi output power set to 0."); delay(100);
+        WiFi.setOutputPower(20.0); logger.debug("Wifi output power set to 20.0."); delay(100);
         WiFi.persistent(true); logger.debug("Wifi persistent set to true."); delay(100);
         WiFi.mode(WIFI_STA); logger.debug("Wifi mode set to station."); delay(100);
         WiFi.setPhyMode(WIFI_PHY_MODE_11N); logger.debug("Wifi phy mode set to 11n."); delay(100);
-        WiFi.hostname("SlimeVR FBT Tracker"); logger.debug("Wifi hostname set to SlimeVR FBT Tracker."); delay(100);
+        WiFi.hostname("SVRFBT"); logger.debug("Wifi hostname set to SVRFBT."); delay(100);
         WiFi.begin(); logger.debug("Wifi begin."); // Should connect to last used access point, see
         // https://arduino-esp8266.readthedocs.io/en/latest/esp8266wifi/station-class.html#begin
+        //beginprov(); // Start provisioning
     }
 
     /// Begins listening on a port.
@@ -55,67 +58,24 @@ struct WifiSerialCommand : BaseCommand {
 
     /// The run function.
     void run(std::vector<String> &arguments) {
+        // Stack protection
+        volatile uint32_t stackCanary;
+        __asm__ __volatile__ ("mov %0, sp" : "=r" (stackCanary));
+        if(stackCanary < 0x3FFE8000) {
+            logger.error("Stack corruption detected in WiFi command!");
+            ESP.reset();
+        }
 
         if(arguments.size() < 1){
             logger.print("Usage: wifi <ssid> <password>(optional)");
             return;
         }
-        // if we're on the 1st fallback (11g)
-        if(fallback_11g && (!fallback_11b)){
-            WiFi.setPhyMode(WIFI_PHY_MODE_11G);
-        }
-        // if we're on the 2nd fallback (11b)
-        if (fallback_11b & (!fallback_11g)){
-            WiFi.setPhyMode(WIFI_PHY_MODE_11B);
-        }
+        //if (provisioning) {
+        //    stopprov(); // Stop provisioning if we are in provisioning mode
+        //}
+        // Start connection and return immediately
         WiFi.begin(arguments[0].c_str(), arguments[1].c_str());
-        logger.print("Connecting to WiFi: %s", arguments[0].c_str());
-        int attempts=0;
-        while (WiFi.status() != WL_CONNECTED) {
-            delay(500);
-            attempts++;
-            if(attempts > 40){
-                switch (WiFi.status()) {
-                    case WL_IDLE_STATUS:
-                        logger.error("WiFi is in idle state");
-                        break;
-                    case WL_NO_SSID_AVAIL:
-                        logger.error("SSID not found");
-                        break;
-                    case WL_WRONG_PASSWORD:
-                        logger.error("Wrong password.");
-                        break;
-                    case WL_CONNECT_FAILED:
-                        logger.error("Connection failed");
-                        break;
-                    case WL_DISCONNECTED:
-                        logger.error("WiFi is disconnected");
-                        break;
-                    default:
-                        logger.error("Failed to connect to WiFi. Unknown error: %d", WiFi.status());
-                        break;
-                }
-                delay(100);
-                // first fallback
-                if ((!fallback_11g) && (!fallback_11b)){
-                    logger.print("Trying to re-connect with 11G.");
-                    fallback_11g=true;
-                    return run(arguments); // recursion for fallback
-                }
-                // second fallback
-                if (!fallback_11b) {
-                    logger.print("Trying to re-connect with 11B.");
-                    fallback_11g=false; // reset the 11g fallback
-                    fallback_11b=true;
-                    return run(arguments); // recursion for fallback
-                }
-                // we ran out of fallbacks.
-                WiFi.setPhyMode(WIFI_PHY_MODE_11N); // reset back to 11n, could call the init again but
-                // that would just make the module connect back to the last used access point.
-                return;
-            }
-        }
-        logger.print("Connected to WiFi: %s", arguments[0].c_str());
+        logger.print("Connecting to %s...", arguments[0].c_str());
     }
     
     ///listen for broadcast
